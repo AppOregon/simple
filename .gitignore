@@ -8,8 +8,6 @@
 **/gradle/*
 
 /.project
-/gradlew
-/gradlew.bat
 
 **/*.log
 **/*.bak
