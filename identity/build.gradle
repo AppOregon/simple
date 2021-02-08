@@ -1,0 +1,29 @@
+plugins {
+    id 'java'
+}
+
+group = project.property('root.group')
+version = project.property('root.version')
+sourceCompatibility = project.property('root.java.source')
+targetCompatibility = project.property('root.java.target')
+
+repositories {
+    mavenLocal()
+    mavenCentral()
+}
+
+dependencies {
+    compileOnly "org.projectlombok:lombok:${lombok_version}"
+    annotationProcessor "org.projectlombok:lombok:${lombok_version}"
+    testImplementation "org.junit.jupiter:junit-jupiter-api:${junit_version}"
+    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine'
+}
+
+jar {
+    archiveBaseName = "${project.name}"
+    archiveVersion = "${project.version}"
+}
+
+test {
+    useJUnitPlatform()
+}

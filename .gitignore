@@ -1,0 +1,16 @@
+/.idea/*
+/.metadata/*
+/.project/*
+/.gradle/*
+
+**/target/*
+**/build/*
+**/gradle/*
+
+/.project
+/gradlew
+/gradlew.bat
+
+**/*.log
+**/*.bak
+**/*.bak_*

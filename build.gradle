@@ -1,0 +1,23 @@
+plugins {
+    id 'java'
+    id 'application'
+}
+
+group = project.property('root.group')
+version = project.property('root.version')
+
+ext {
+    junit_version = '5.6.0'
+    lombok_version = '1.18.18'
+}
+
+
+tasks.withType(JavaCompile) {
+    sourceCompatibility = project.property('root.java.source')
+    targetCompatibility = project.property('root.java.target')
+}
+
+repositories {
+    mavenLocal()
+    mavenCentral()
+}

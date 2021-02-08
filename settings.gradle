@@ -1,0 +1,5 @@
+rootProject.name = 'PacificEngine'
+include 'identity'
+include 'event'
+include 'property'
+
