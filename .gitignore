@@ -1,12 +1,12 @@
-/.idea/*
-/.metadata/*
-/.project/*
-/.gradle/*
+**/.idea/*
+**/.metadata/*
+**/.project/*
+**/.gradle/*
 
 **/target/*
 **/build/*
 
-/.project
+**/.project
 
 **/*.log
 **/*.bak

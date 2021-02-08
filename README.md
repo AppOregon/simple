@@ -10,8 +10,6 @@ Pre-Commit
 rm -rf gradle/ gradlew gradlew.bat
 gradle wrapper --gradle-version=6.8.2 --distribution-type=all
 git add gradle/ gradlew gradlew.bat
-git update-index --chmod=+x gradle/wrapper/gradle-wrapper.jar
-git update-index --chmod=+x gradlew
-git update-index --chmod=+x gradlew.bat
+git update-index --chmod=+x gradle/wrapper/gradle-wrapper.jar gradlew gradlew.bat
 git add gradle/ gradlew gradlew.bat
 ```
