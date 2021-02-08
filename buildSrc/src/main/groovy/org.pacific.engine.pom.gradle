@@ -1,0 +1,40 @@
+plugins {
+    id 'maven'
+}
+
+task pom {
+    dependsOn 'build'
+    doLast {
+        pom {
+            project {
+                groupId = "${project.property('project.group')}"
+                artifactId = "${project.name}"
+                version = "${project.version}"
+                packaging = 'jar'
+
+                name = "${project.property('project.name.full')}"
+                description = "${project.property('project.description')}"
+                url = "${project.property('git.repo.url')}"
+                properties = []
+                licenses {
+                    license {
+                        name = 'The Apache License, Version 2.0'
+                        url = 'http://www.apache.org/licenses/LICENSE-2.0.txt'
+                    }
+                }
+                developers {
+                    developer {
+                        id = "${project.property('project.dev.id')}"
+                        name = "${project.property('project.dev.name')}"
+                        url = "${project.property('project.dev.url')}"
+                    }
+                }
+                scm {
+                    connection = "scm:git:git://${project.property('git.repo.address')}"
+                    developerConnection = "scm:git:ssh://${project.property('git.repo.address')}"
+                    url = "${project.property('git.repo.url')}"
+                }
+            }
+        }.writeTo("$buildDir/pom.xml")
+    }
+}
