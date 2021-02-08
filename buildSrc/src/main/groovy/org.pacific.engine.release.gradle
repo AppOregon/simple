@@ -1,0 +1,16 @@
+plugins {
+    id 'signing'
+}
+
+ext {
+    isReleaseVersion = !version.endsWith("SNAPSHOT")
+}
+
+tasks.withType(Sign) {
+    onlyIf { isReleaseVersion }
+    sign publishing.publications.mavenJava
+}
+
+
+//https://docs.gradle.org/current/userguide/signing_plugin.html
+//https://docs.gradle.org/current/userguide/publishing_maven.html

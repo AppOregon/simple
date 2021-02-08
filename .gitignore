@@ -1,7 +1,7 @@
 **/.idea/*
 **/.metadata/*
 **/.project/*
-**/.gradle/*
+**/.gradle/*:
 
 **/target/*
 **/build/*
