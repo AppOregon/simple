@@ -5,9 +5,11 @@ plugins {
 }
 
 dependencies {
-    compileOnly "org.projectlombok:lombok:${lombok_version}"
-    annotationProcessor "org.projectlombok:lombok:${lombok_version}"
-    implementation project(':identity')
-    testImplementation "org.junit.jupiter:junit-jupiter-api:${junit_version}"
-    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine'
+    compileOnly         group: 'org.projectlombok', name: 'lombok', version: "${lombok_version}"
+    annotationProcessor group: 'org.projectlombok', name: 'lombok', version: "${lombok_version}"
+    implementation      project(':identity')
+    testImplementation  group: 'org.junit.jupiter', name: 'junit-jupiter-api', version: "${junit_version}"
+    testImplementation  group: 'org.mockito', name: 'mockito-core', version: "${mockito_version}"
+    testImplementation  group: 'org.awaitility', name: 'awaitility', version: "${awaitility_version}"
+    testRuntimeOnly     group: 'org.junit.jupiter', name: 'junit-jupiter-engine', version: "${junit_version}"
 }

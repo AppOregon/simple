@@ -11,4 +11,6 @@ public interface EventPlanner {
     boolean sendEvent(Stream<Subscription> subscriptions, Event event);
     boolean sendEvent(Stream<Subscription> subscriptions, Event event, BiConsumer<Event, Map<String, Object>> onComplete);
     boolean cancelEvent(String eventIdentifier);
+    boolean isShutdown();
+    boolean shutdown();
 }

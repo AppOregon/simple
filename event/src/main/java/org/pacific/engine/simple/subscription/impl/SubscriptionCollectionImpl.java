@@ -1,6 +1,7 @@
 package org.pacific.engine.simple.subscription.impl;
 
 import lombok.RequiredArgsConstructor;
+import org.pacific.engine.simple.event.Event;
 import org.pacific.engine.simple.event.impl.UnsubscribeEventImpl;
 import org.pacific.engine.simple.planner.EventPlannerRegistry;
 import org.pacific.engine.simple.subscription.Subscription;
@@ -18,7 +19,9 @@ public class SubscriptionCollectionImpl implements SubscriptionCollection {
     private final Map<String, Set<InternalSubscription>> typeMap = new ConcurrentHashMap<>();
 
     private final String registryIdentifier;
+    private final Map<String, Class> eventTypeMap;
 
+    @Override
     public boolean addSubscription(Subscription subscription) {
         if (subscription == null
                 || subscription.getSubscriber() == null
@@ -28,7 +31,11 @@ public class SubscriptionCollectionImpl implements SubscriptionCollection {
 
         InternalSubscription internalSubscription = new InternalSubscription(subscription);
         if (subscriptionMap.containsKey(internalSubscription.identifier)) {
-            return false;
+            throw new IllegalArgumentException("Subscription already exists");
+        }
+
+        if (!eventTypeMap.containsKey(internalSubscription.type)) {
+            throw new IllegalArgumentException("Cannot subscribe to type");
         }
 
         subscriptionMap.put(internalSubscription.identifier, internalSubscription);
@@ -53,6 +60,20 @@ public class SubscriptionCollectionImpl implements SubscriptionCollection {
         return true;
     }
 
+    @Override
+    public boolean sendEvent(String type, Event event) {
+        if (!eventTypeMap.containsKey(type)) {
+            throw new IllegalArgumentException("Cannot send event of type");
+        }
+
+        Stream<Subscription> subscriptions = getSubscriptions(type);
+        if (subscriptions != null) {
+            return EventPlannerRegistry.getPlanner(registryIdentifier).sendEvent(subscriptions, event);
+        }
+        return true;
+    }
+
+    @Override
     public Subscription removeSubscription(String identifier) {
         InternalSubscription subscription;
 
@@ -68,19 +89,22 @@ public class SubscriptionCollectionImpl implements SubscriptionCollection {
         return subscription.subscription;
     }
 
+    @Override
     public boolean removeAllSubscriptions() {
         subscriptionMap.forEach((key, value) -> removeSubscription(key));
         return subscriptionMap.isEmpty();
     }
 
-    @Override
     public Subscription getSubscription(String identifier) {
         return Optional.ofNullable(subscriptionMap.get(identifier)).map(subscription -> subscription.subscription).orElse(null);
     }
 
-    @Override
     public Stream<Subscription> getSubscriptions(String type) {
-        return typeMap.get(type).stream().filter(Objects::nonNull).map(subscription -> subscription.subscription);
+        return Optional.ofNullable(typeMap.get(type)).filter(subscribers -> !subscribers.isEmpty()).map(subscribers -> subscribers.stream().filter(Objects::nonNull).map(subscription -> subscription.subscription)).orElse(null);
+    }
+
+    public Map<String, Class> getSubscriptionIdentifiers() {
+        return Collections.unmodifiableMap(eventTypeMap);
     }
 
     private static class InternalSubscription {

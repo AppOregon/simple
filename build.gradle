@@ -5,14 +5,10 @@ plugins {
 }
 
 ext {
-    isReleaseVersion = !version.endsWith("SNAPSHOT")
-    junit_version = '5.6.0'
-    lombok_version = '1.18.18'
+    isReleaseVersion        = !version.endsWith("SNAPSHOT")
+    junit_version           = '5.7.1'
+    mockito_version         = '3.7.7'
+    awaitility_version      = '4.0.3'
+    lombok_version          = '1.18.18'
 }
 
-if (hasProperty('buildScan')) {
-    buildScan {
-        termsOfServiceUrl = 'https://gradle.com/terms-of-service'
-        termsOfServiceAgree = 'yes'
-    }
-}

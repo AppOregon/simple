@@ -13,4 +13,8 @@ public class EventPlannerRegistry {
     public static EventPlanner getPlanner(String registryIdentifier) {
         return registry.get(registryIdentifier);
     }
+
+    public static EventPlanner remove(String registryIdentifier) {
+        return registry.remove(registryIdentifier);
+    }
 }
