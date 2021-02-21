@@ -7,7 +7,7 @@ import java.util.stream.Stream;
 
 public interface SubscriptionCollection {
     boolean addSubscription(Subscription subscription);
-    boolean sendEvent(String type, Event event);
+    boolean sendEvent(Event event);
     Subscription getSubscription(String identifier);
     Stream<Subscription> getSubscriptions(String type);
     Subscription removeSubscription(String identifier);

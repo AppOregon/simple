@@ -61,12 +61,12 @@ public class SubscriptionCollectionImpl implements SubscriptionCollection {
     }
 
     @Override
-    public boolean sendEvent(String type, Event event) {
-        if (!eventTypeMap.containsKey(type)) {
+    public boolean sendEvent(Event event) {
+        if (!eventTypeMap.containsKey(event.getType())) {
             throw new IllegalArgumentException("Cannot send event of type");
         }
 
-        Stream<Subscription> subscriptions = getSubscriptions(type);
+        Stream<Subscription> subscriptions = getSubscriptions(event.getType());
         if (subscriptions != null) {
             return EventPlannerRegistry.getPlanner(registryIdentifier).sendEvent(subscriptions, event);
         }

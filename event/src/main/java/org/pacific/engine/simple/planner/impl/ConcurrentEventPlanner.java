@@ -12,8 +12,6 @@ import org.pacific.engine.simple.subscription.SubscriptionCollection;
 import org.pacific.engine.simple.subscription.impl.SubscriptionCollectionImpl;
 
 import java.util.AbstractMap;
-import java.util.Collections;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.*;
 import java.util.function.BiConsumer;
@@ -51,12 +49,13 @@ public class ConcurrentEventPlanner extends AbstractEventPlanner implements Subs
     }
 
     protected void executeEvents() {
-        while(!shutdown) {
+        while(!shutdown
+            || getQueueSize() > 0) {
             try {
                 PendingEvent event = nextEvent();
                 if (event == null) {
                     if (!isEmpty) {
-                        subscriptions.sendEvent("EmptyEventQueue", new EventImpl(0, null));
+                        subscriptions.sendEvent(new EventImpl("EmptyEventQueue", 0,null));
                     }
                     isEmpty = true;
                     if (emptyDelayMilliSeconds > 0 || emptyDelayNanoSeconds > 0) {
@@ -67,7 +66,7 @@ public class ConcurrentEventPlanner extends AbstractEventPlanner implements Subs
                     try {
                         threadPool.submit(() -> executeEvent(event));
                     } catch (RejectedExecutionException exception) {
-                        subscriptions.sendEvent("ThreadPoolLimitReached", new EventImpl(0, null));
+                        subscriptions.sendEvent(new EventImpl("ThreadPoolLimitReached", 0, null));
                         if (threadPoolLimitPollDelayMilliseconds > 0 || threadPoolLimitPollDelayNanoseconds > 0) {
                             while(threadPool.getMaximumPoolSize() <= threadPool.getActiveCount()) {
                                 Thread.sleep(threadPoolLimitPollDelayMilliseconds, threadPoolLimitPollDelayNanoseconds);
@@ -116,6 +115,11 @@ public class ConcurrentEventPlanner extends AbstractEventPlanner implements Subs
     public boolean shutdown() {
         subscriptions.removeAllSubscriptions();
         shutdown = true;
+        try {
+            while (getQueueSize() > 0) {
+                Thread.sleep(1);
+            }
+        } catch (InterruptedException e) {}
         threadPool.shutdown();
         return true;
     }

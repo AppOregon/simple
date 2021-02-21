@@ -42,6 +42,10 @@ public abstract class AbstractEventPlanner implements EventPlanner {
     }
 
     public boolean sendEvent(Stream<Subscription> subscriptions, Event event, BiConsumer<Event, Map<String, Object>> onComplete) {
+        if (isShutdown()) {
+            return false;
+        }
+
         PendingEvent pendingEvent = new PendingEvent(subscriptions, event, onComplete);
         if (pendingEventMap.containsKey(pendingEvent.getIdentifier())) {
             return false;
@@ -72,6 +76,10 @@ public abstract class AbstractEventPlanner implements EventPlanner {
         }
 
         return event;
+    }
+
+    public int getQueueSize() {
+        return pendingEventMap.size();
     }
 
     @Getter

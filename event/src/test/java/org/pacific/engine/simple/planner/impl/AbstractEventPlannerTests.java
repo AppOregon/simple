@@ -38,7 +38,7 @@ public class AbstractEventPlannerTests {
 
     @Test
     void singleEvent() {
-        Event event = new EventImpl(0, null);
+        Event event = createEvent(0);
         assertTrue(planner.sendEvent(null, event));
         assertEquals(event.getIdentifier(), Optional.ofNullable(planner.nextEvent()).map(AbstractEventPlanner.PendingEvent::getIdentifier).orElse(null));
         assertEquals(null, planner.nextEvent());
@@ -46,7 +46,7 @@ public class AbstractEventPlannerTests {
 
     @Test
     void duplicateEvent() {
-        Event event = new EventImpl(0, null);
+        Event event = createEvent(0);
         assertTrue(planner.sendEvent(null, event));
         assertFalse(planner.sendEvent(null, event));
         assertEquals(event.getIdentifier(), Optional.ofNullable(planner.nextEvent()).map(AbstractEventPlanner.PendingEvent::getIdentifier).orElse(null));
@@ -55,9 +55,9 @@ public class AbstractEventPlannerTests {
 
     @Test
     void nullPriority() {
-        Event event1 = new EventImpl(1, null);
-        Event event2 = new EventImpl(null, null);
-        Event event3 = new EventImpl(0, null);
+        Event event1 = createEvent(1);
+        Event event2 = createEvent(null);
+        Event event3 = createEvent(0);
         assertTrue(planner.sendEvent(null, event1));
         assertTrue(planner.sendEvent(null, event2));
         assertTrue( planner.sendEvent(null, event3));
@@ -69,7 +69,7 @@ public class AbstractEventPlannerTests {
 
     @Test
     void verifyPriority() {
-        List<Event> events = IntStream.range(0, 1000).mapToObj(val -> new EventImpl(1000 - val, null)).collect(Collectors.toList());
+        List<Event> events = IntStream.range(0, 1000).mapToObj(val -> createEvent(1000 - val)).collect(Collectors.toList());
         events.forEach(event -> assertTrue(planner.sendEvent(null, event)));
         Collections.reverse(events);
         events.forEach(event -> assertEquals(event.getIdentifier(), Optional.ofNullable(planner.nextEvent()).map(AbstractEventPlanner.PendingEvent::getIdentifier).orElse(null)));
@@ -78,7 +78,7 @@ public class AbstractEventPlannerTests {
 
     @Test
     void verifyFIFO() {
-        List<Event> events = IntStream.range(0, 1000).mapToObj(val -> new EventImpl(0, null)).collect(Collectors.toList());
+        List<Event> events = IntStream.range(0, 1000).mapToObj(val -> createEvent(0)).collect(Collectors.toList());
         events.forEach(event -> assertTrue(planner.sendEvent(null, event)));
         events.forEach(event -> assertEquals(event.getIdentifier(), Optional.ofNullable(planner.nextEvent()).map(AbstractEventPlanner.PendingEvent::getIdentifier).orElse(null)));
         assertEquals(null, planner.nextEvent());
@@ -86,7 +86,7 @@ public class AbstractEventPlannerTests {
 
     @Test
     void cancelEvent() {
-        Event event = new EventImpl(0, null);
+        Event event = createEvent(0);
         assertTrue(planner.sendEvent(null, event));
         assertTrue(planner.cancelEvent(event.getIdentifier()));
         assertEquals(null, planner.nextEvent());
@@ -94,14 +94,14 @@ public class AbstractEventPlannerTests {
 
     @Test
     void cancelNonExistent() {
-        Event event = new EventImpl(0, null);
+        Event event = createEvent(0);
         assertFalse(planner.cancelEvent(event.getIdentifier()));
         assertEquals(null, planner.nextEvent());
     }
 
     @Test
     void cancelCompleted() {
-        Event event = new EventImpl(0, null);
+        Event event = createEvent(0);
         assertTrue(planner.sendEvent(null, event));
         assertEquals(event.getIdentifier(), Optional.ofNullable(planner.nextEvent()).map(AbstractEventPlanner.PendingEvent::getIdentifier).orElse(null));
         assertFalse(planner.cancelEvent(event.getIdentifier()));
@@ -110,9 +110,9 @@ public class AbstractEventPlannerTests {
 
     @Test
     void cancelInCollection() {
-        Event event1 = new EventImpl(1, null);
-        Event event2 = new EventImpl(null, null);
-        Event event3 = new EventImpl(0, null);
+        Event event1 = createEvent(1);
+        Event event2 = createEvent(null);
+        Event event3 = createEvent(0);
         assertTrue(planner.sendEvent(null, event1));
         assertTrue(planner.sendEvent(null, event2));
         assertTrue(planner.sendEvent(null, event3));
@@ -123,5 +123,9 @@ public class AbstractEventPlannerTests {
         assertEquals(event3.getIdentifier(), Optional.ofNullable(planner.nextEvent()).map(AbstractEventPlanner.PendingEvent::getIdentifier).orElse(null));
         assertEquals(event2.getIdentifier(), Optional.ofNullable(planner.nextEvent()).map(AbstractEventPlanner.PendingEvent::getIdentifier).orElse(null));
         assertEquals(null, planner.nextEvent());
+    }
+
+    Event createEvent(Integer priority) {
+        return new EventImpl("TestEvent", priority, null);
     }
 }
