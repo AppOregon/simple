@@ -11,9 +11,17 @@ import java.util.function.BiConsumer;
 import java.util.stream.Stream;
 
 public class DelayableConcurrentEventPlanner extends ConcurrentEventPlanner implements FutureEventPlanner, TickEventPlanner {
+    public static final String AUTO_TICK = "NextTickOccurred";
+
+    private long tickMinimumDelayMillseconds;
+    private int tickMinimumDelayNanoseconds;
+    private boolean allowAutoTicking;
+    private long currentTick = Long.MIN_VALUE;
+
     // TODO
-    public DelayableConcurrentEventPlanner(String registryIdentifier, int threadPoolSize, long emptyDelayinNanoseconds, long threadPoolLimitPollingNanoseconds, long threadPoolLimitReachedNotifyIntervalMilliseconds) {
+    public DelayableConcurrentEventPlanner(String registryIdentifier, int threadPoolSize, long emptyDelayinNanoseconds, long threadPoolLimitPollingNanoseconds, long threadPoolLimitReachedNotifyIntervalMilliseconds, boolean allowAutoTicking, long tickMinimumDelayNanoseconds) {
         super(registryIdentifier, threadPoolSize, emptyDelayinNanoseconds, threadPoolLimitPollingNanoseconds, threadPoolLimitReachedNotifyIntervalMilliseconds);
+        setAutoTicking(allowAutoTicking, tickMinimumDelayNanoseconds);
     }
 
     @Override
@@ -34,5 +42,15 @@ public class DelayableConcurrentEventPlanner extends ConcurrentEventPlanner impl
     @Override
     public boolean sendEvent(Stream<Subscription> subscriptions, Event event, BiConsumer<Event, Map<String, Object>> onComplete, Long tickDelay) {
         return false;
+    }
+
+    public void nextTick() {
+
+    }
+
+    public void setAutoTicking(boolean enabled, long tickMinimumDelayNanoseconds) {
+        this.tickMinimumDelayMillseconds = tickMinimumDelayNanoseconds / 100000;
+        this.tickMinimumDelayNanoseconds = (int)(tickMinimumDelayNanoseconds % 100000);
+        this.allowAutoTicking = enabled;
     }
 }

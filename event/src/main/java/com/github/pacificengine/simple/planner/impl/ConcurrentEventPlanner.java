@@ -1,12 +1,13 @@
 package com.github.pacificengine.simple.planner.impl;
 
+import com.github.pacificengine.simple.event.DatedEvent;
+import com.github.pacificengine.simple.event.impl.DatedEventImpl;
 import com.github.pacificengine.simple.subscription.Subscribable;
 import com.github.pacificengine.simple.subscription.Subscription;
 import com.github.pacificengine.simple.subscription.impl.SubscriptionCollectionImpl;
 import lombok.Getter;
 import com.github.pacificengine.simple.event.Event;
 import com.github.pacificengine.simple.event.exception.EventFailureException;
-import com.github.pacificengine.simple.event.impl.EventImpl;
 import com.github.pacificengine.simple.subscription.Subscriber;
 import com.github.pacificengine.simple.subscription.SubscriptionCollection;
 
@@ -50,9 +51,9 @@ public class ConcurrentEventPlanner extends AbstractEventPlanner implements Subs
 
         this.threadPool = new ThreadPoolExecutor(1, threadPoolSize + 1, 60, TimeUnit.SECONDS, new SynchronousQueue<>(true));
         this.subscriptions = new SubscriptionCollectionImpl(registryIdentifier, Stream.of(
-                new AbstractMap.SimpleImmutableEntry<>(EMPTY_QUEUE_TYPE, Event.class),
-                new AbstractMap.SimpleImmutableEntry<>(EMPTY_PLANNER_TYPE, Event.class),
-                new AbstractMap.SimpleImmutableEntry<>(THREAD_POOL_LIMIT_HIT, Event.class))
+                new AbstractMap.SimpleImmutableEntry<>(EMPTY_QUEUE_TYPE, DatedEvent.class),
+                new AbstractMap.SimpleImmutableEntry<>(EMPTY_PLANNER_TYPE, DatedEvent.class),
+                new AbstractMap.SimpleImmutableEntry<>(THREAD_POOL_LIMIT_HIT, DatedEvent.class))
                 .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue)));
         this.emptyDelayMilliSeconds = emptyDelayinNanoseconds / 100000;
         this.emptyDelayNanoSeconds = (int)(emptyDelayinNanoseconds % 100000);
@@ -172,6 +173,6 @@ public class ConcurrentEventPlanner extends AbstractEventPlanner implements Subs
     }
 
     protected PendingEvent createEvent(String type) {
-        return new PendingEvent(subscriptions.getSubscriptions(type), new EventImpl(type, Integer.MIN_VALUE, null), null);
+        return new PendingEvent(subscriptions.getSubscriptions(type), new DatedEventImpl(type, Integer.MIN_VALUE, null), null);
     }
 }
