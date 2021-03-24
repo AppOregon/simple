@@ -9,6 +9,7 @@ import com.github.pacificengine.simple.subscription.SubscriptionCollection;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentSkipListSet;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Stream;
 
 public class SubscriptionCollectionImpl implements SubscriptionCollection {
@@ -38,8 +39,13 @@ public class SubscriptionCollectionImpl implements SubscriptionCollection {
             throw new IllegalArgumentException("Cannot subscribe to type");
         }
 
-        subscriptionMap.putIfAbsent(internalSubscription.identifier, internalSubscription);
-        if (subscriptionMap.get(internalSubscription.identifier) != internalSubscription) {
+        AtomicBoolean exists = new AtomicBoolean(true);
+        subscriptionMap.computeIfAbsent(internalSubscription.identifier, key -> {
+            exists.set(false);
+            return internalSubscription;
+        });
+
+        if (exists.get()) {
             throw new IllegalArgumentException("Subscription already exists");
         }
 

@@ -1,5 +1,6 @@
 package com.github.pacificengine.simple.planner.impl;
 
+import com.github.pacificengine.simple.planner.EventPlanner;
 import com.github.pacificengine.simple.subscription.Subscribable;
 import com.github.pacificengine.simple.subscription.Subscription;
 import com.github.pacificengine.simple.subscription.impl.SubscriptionImpl;
@@ -35,9 +36,7 @@ public class ConcurrentEventPlannerTests {
         final long start = System.currentTimeMillis();
         AtomicInteger waitTime = new AtomicInteger(- 1);
         planner.sendEvent(Stream.of(createSubscription(sub1)), createEvent(0));
-        planner.sendEvent(Stream.of(createSubscription(sub1)), createEvent(1), (event, results) -> {
-            waitTime.set((int)(System.currentTimeMillis() - start));
-        });
+        planner.sendEvent(Stream.of(createSubscription(sub1)), createEvent(1), (event, results) -> waitTime.set((int)(System.currentTimeMillis() - start)));
 
         await().atMost(1, TimeUnit.SECONDS).until(() -> waitTime.get() != -1);
         assertTrue(waitTime.get() >= 200, waitTime.get() + " >= 200");
@@ -57,9 +56,7 @@ public class ConcurrentEventPlannerTests {
         final long start = System.currentTimeMillis();
         AtomicInteger waitTime = new AtomicInteger(- 1);
         planner.sendEvent(Stream.of(createSubscription(sub1)), createEvent(0));
-        planner.sendEvent(Stream.of(createSubscription(sub1)), createEvent(1), (event, results) -> {
-            waitTime.set((int)(System.currentTimeMillis() - start));
-        });
+        planner.sendEvent(Stream.of(createSubscription(sub1)), createEvent(1), (event, results) -> waitTime.set((int)(System.currentTimeMillis() - start)));
 
         await().atMost(1, TimeUnit.SECONDS).until(() -> waitTime.get() != -1);
         assertTrue(waitTime.get() < 200, waitTime.get() + " < 200");
@@ -69,12 +66,12 @@ public class ConcurrentEventPlannerTests {
 
     @AfterEach
     void shutdown() {
-        Optional.ofNullable(EventPlannerRegistry.remove("ConcurrentEventPlannerTests")).map(oldPlanner -> oldPlanner.shutdown());
+        Optional.ofNullable(EventPlannerRegistry.remove("ConcurrentEventPlannerTests")).map(EventPlanner::shutdown);
     }
 
     ConcurrentEventPlanner setup(int threadSize) {
         ConcurrentEventPlanner planner = new ConcurrentEventPlanner("ConcurrentEventPlannerTests", threadSize, 100000, 100000, 0);
-        Optional.ofNullable(EventPlannerRegistry.register("ConcurrentEventPlannerTests", planner)).map(oldPlanner -> oldPlanner.shutdown());
+        Optional.ofNullable(EventPlannerRegistry.register("ConcurrentEventPlannerTests", planner)).map(EventPlanner::shutdown);
         return planner;
     }
 

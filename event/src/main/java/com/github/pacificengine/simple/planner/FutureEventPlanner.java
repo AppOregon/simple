@@ -9,6 +9,6 @@ import java.util.function.BiConsumer;
 import java.util.stream.Stream;
 
 public interface FutureEventPlanner extends EventPlanner {
-    boolean sendEvent(Stream<Subscription> subscriptions, Event event, Long delayTime, TimeUnit delayUnit);
-    boolean sendEvent(Stream<Subscription> subscriptions, Event event, BiConsumer<Event, Map<String, Object>> onComplete, Long delayTime, TimeUnit delayUnit);
+    boolean sendEvent(Stream<Subscription> subscriptions, Event event, long delayTime, TimeUnit delayUnit);
+    boolean sendEvent(Stream<Subscription> subscriptions, Event event, BiConsumer<Event, Map<String, Object>> onComplete, long delayTime, TimeUnit delayUnit);
 }

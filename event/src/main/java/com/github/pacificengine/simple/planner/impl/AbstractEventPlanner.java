@@ -6,10 +6,12 @@ import com.github.pacificengine.simple.event.Event;
 import com.github.pacificengine.simple.identity.impl.IdentifiableImpl;
 import com.github.pacificengine.simple.planner.EventPlanner;
 
+import java.util.Comparator;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentSkipListSet;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.BiConsumer;
 import java.util.stream.Stream;
@@ -17,43 +19,29 @@ import java.util.stream.Stream;
 public abstract class AbstractEventPlanner implements EventPlanner {
     private static final Integer DEFAULT_PRIORITY = Integer.MAX_VALUE;
     private final Map<String, PendingEvent> pendingEventMap = new ConcurrentHashMap<>();
-    private final ConcurrentSkipListSet<PendingEvent> pendingEventSet = new ConcurrentSkipListSet<>((PendingEvent s1, PendingEvent s2) -> {
-        int val1 = s1.priority;
-        int val2 = s2.priority;
-        if (val1 == val2) {
-            if (s1.fifoValue == s2.fifoValue) {
-                return 0;
-            }
-            return s1.fifoValue < s2.fifoValue ? -1 : 1;
-        } else {
-            try {
-                return Math.subtractExact(val1, val2);
-            } catch (ArithmeticException e) {
-                return val1 < val2 ? Integer.MIN_VALUE : Integer.MAX_VALUE;
-            }
-        }
-    });
+    private final ConcurrentSkipListSet<PendingEvent> pendingEventSet = new ConcurrentSkipListSet<>(pendingEventComparator);
 
     public boolean sendEvent(Stream<Subscription> subscriptions, Event event) {
         return sendEvent(subscriptions, event, null);
     }
 
     public boolean sendEvent(Stream<Subscription> subscriptions, Event event, BiConsumer<Event, Map<String, Object>> onComplete) {
+        return sendEvent(new PendingEvent(subscriptions, event, onComplete));
+    }
+
+    protected boolean sendEvent(PendingEvent event) {
         if (isShutdown()) {
             return false;
         }
 
-        PendingEvent pendingEvent = new PendingEvent(subscriptions, event, onComplete);
-        if (pendingEventMap.containsKey(pendingEvent.getIdentifier())) {
-            return false;
-        }
-
-        pendingEventMap.computeIfAbsent(pendingEvent.getIdentifier(), (key) -> {
-            pendingEventSet.add(pendingEvent);
-            return pendingEvent;
+        AtomicBoolean exists = new AtomicBoolean(true);
+        pendingEventMap.computeIfAbsent(event.getIdentifier(), key -> {
+            exists.set(false);
+            pendingEventSet.add(event);
+            return event;
         });
 
-        return true;
+        return !exists.get();
     }
 
     public boolean cancelEvent(String eventIdentifier) {
@@ -62,8 +50,7 @@ public abstract class AbstractEventPlanner implements EventPlanner {
             return false;
         }
 
-        boolean value = pendingEventSet.remove(event);
-        return value;
+        return pendingEventSet.remove(event);
     }
 
     protected PendingEvent nextEvent() {
@@ -101,4 +88,21 @@ public abstract class AbstractEventPlanner implements EventPlanner {
             onComplete.accept(event, results);
         }
     }
+
+    protected static final Comparator<PendingEvent> pendingEventComparator = (PendingEvent s1, PendingEvent s2) -> {
+        int val1 = s1.getPriority();
+        int val2 = s2.getPriority();
+        if (val1 == val2) {
+            if (s1.getFifoValue() == s2.getFifoValue()) {
+                return 0;
+            }
+            return s1.getFifoValue() < s2.getFifoValue() ? -1 : 1;
+        } else {
+            try {
+                return Math.subtractExact(val1, val2);
+            } catch (ArithmeticException e) {
+                return val1 < val2 ? Integer.MIN_VALUE : Integer.MAX_VALUE;
+            }
+        }
+    };
 }
