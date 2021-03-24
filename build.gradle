@@ -1,7 +1,7 @@
 plugins {
-    id 'org.pacific.engine.repository'
-    id 'org.pacific.engine.java'
-    id 'org.pacific.engine.pom'
+    id 'com.github.pacificengine.repository'
+    id 'com.github.pacificengine.java'
+    id 'com.github.pacificengine.pom'
 }
 
 ext {
