@@ -21,10 +21,12 @@ public abstract class AbstractEventPlanner implements EventPlanner {
     private final Map<String, PendingEvent> pendingEventMap = new ConcurrentHashMap<>();
     private final ConcurrentSkipListSet<PendingEvent> pendingEventSet = new ConcurrentSkipListSet<>(pendingEventComparator);
 
+    @Override
     public boolean sendEvent(Stream<Subscription> subscriptions, Event event) {
         return sendEvent(subscriptions, event, null);
     }
 
+    @Override
     public boolean sendEvent(Stream<Subscription> subscriptions, Event event, BiConsumer<Event, Map<String, Object>> onComplete) {
         return sendEvent(new PendingEvent(subscriptions, event, onComplete));
     }
@@ -44,6 +46,7 @@ public abstract class AbstractEventPlanner implements EventPlanner {
         return !exists.get();
     }
 
+    @Override
     public boolean cancelEvent(String eventIdentifier) {
         PendingEvent event = pendingEventMap.remove(eventIdentifier);
         if (event == null) {

@@ -66,12 +66,13 @@ public class ConcurrentEventPlannerTests {
 
     @AfterEach
     void shutdown() {
-        Optional.ofNullable(EventPlannerRegistry.remove("ConcurrentEventPlannerTests")).map(EventPlanner::shutdown);
+        Optional.ofNullable(EventPlannerRegistry.remove("ConcurrentEventPlannerTests")).map(planner -> planner.shutdown(false));
     }
 
     ConcurrentEventPlanner setup(int threadSize) {
+        shutdown();
         ConcurrentEventPlanner planner = new ConcurrentEventPlanner("ConcurrentEventPlannerTests", threadSize, 100000, 100000, 0);
-        Optional.ofNullable(EventPlannerRegistry.register("ConcurrentEventPlannerTests", planner)).map(EventPlanner::shutdown);
+        EventPlannerRegistry.register("ConcurrentEventPlannerTests", planner);
         return planner;
     }
 

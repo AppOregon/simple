@@ -144,8 +144,16 @@ public class ConcurrentEventPlanner extends AbstractEventPlanner implements Subs
         return null;
     }
 
+    public int getEventSize() {
+        return getQueueSize() + runningEvents.get();
+    }
+
+    public int size() {
+        return getQueueSize() + runningEvents.get();
+    }
+
     @Override
-    public boolean shutdown() {
+    public boolean shutdown(boolean force) {
         subscriptions.removeAllSubscriptions();
         shutdown = true;
         try {

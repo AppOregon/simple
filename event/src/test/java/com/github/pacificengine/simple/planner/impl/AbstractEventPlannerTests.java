@@ -26,8 +26,13 @@ public class AbstractEventPlannerTests {
             }
 
             @Override
-            public boolean shutdown() {
+            public boolean shutdown(boolean force) {
                 return false;
+            }
+
+            @Override
+            public int size() {
+                return 0;
             }
         };
     }

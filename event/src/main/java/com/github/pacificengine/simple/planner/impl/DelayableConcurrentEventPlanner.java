@@ -4,6 +4,7 @@ import com.github.pacificengine.simple.event.Event;
 import com.github.pacificengine.simple.planner.FutureEventPlanner;
 import com.github.pacificengine.simple.planner.TickEventPlanner;
 import com.github.pacificengine.simple.subscription.Subscription;
+import com.github.pacificengine.simple.subscription.impl.SubscriptionImpl;
 
 import java.util.AbstractMap;
 import java.util.Map;
@@ -21,14 +22,13 @@ public class DelayableConcurrentEventPlanner extends ConcurrentEventPlanner impl
     private final Map<String, Map.Entry<PendingEvent, Long>> tickEvents = new ConcurrentHashMap<>();
     private final Map<Long, Set<PendingEvent>> tickOrdering = new ConcurrentHashMap<>();
     private final ScheduledExecutorService scheduler;
-    private long tickMinimumDelayMillseconds;
-    private int tickMinimumDelayNanoseconds;
+    private long tickMinimumDelayNanoseconds;
     private boolean allowAutoTicking;
+    private boolean onlyAutoTickWhenEmpty;
+    private ScheduledFuture<?> autoTickSchedule;
     private AtomicLong currentTick = new AtomicLong(Long.MIN_VALUE);
 
-    // TODO: Handle shutdown
-
-    public DelayableConcurrentEventPlanner(String registryIdentifier, int threadPoolSize, int schedulerThreadPool, long emptyDelayinNanoseconds, long threadPoolLimitPollingNanoseconds, long threadPoolLimitReachedNotifyIntervalMilliseconds, boolean allowAutoTicking, long tickMinimumDelayNanoseconds) {
+    public DelayableConcurrentEventPlanner(String registryIdentifier, int threadPoolSize, int schedulerThreadPool, long emptyDelayinNanoseconds, long threadPoolLimitPollingNanoseconds, long threadPoolLimitReachedNotifyIntervalMilliseconds, boolean allowAutoTicking, boolean onlyAutoTickWhenEmpty, long tickMinimumDelayNanoseconds) {
         super(registryIdentifier, threadPoolSize, emptyDelayinNanoseconds, threadPoolLimitPollingNanoseconds, threadPoolLimitReachedNotifyIntervalMilliseconds);
 
         if (schedulerThreadPool < 1) {
@@ -36,7 +36,22 @@ public class DelayableConcurrentEventPlanner extends ConcurrentEventPlanner impl
         }
         scheduler = Executors.newScheduledThreadPool(schedulerThreadPool);
 
-        setAutoTicking(allowAutoTicking, tickMinimumDelayNanoseconds);
+        setAutoTicking(allowAutoTicking, onlyAutoTickWhenEmpty, tickMinimumDelayNanoseconds);
+    }
+
+    @Override
+    public boolean shutdown(boolean force) {
+        synchronized(this) {
+            if (autoTickSchedule != null) {
+                autoTickSchedule.cancel(force);
+            }
+            autoTickSchedule = null;
+        }
+        scheduledEvents.forEach((key, value) -> value.cancel(force));
+        scheduledEvents.clear();
+        tickEvents.clear();
+        tickOrdering.clear();
+        return super.shutdown(force);
     }
 
     @Override
@@ -90,7 +105,7 @@ public class DelayableConcurrentEventPlanner extends ConcurrentEventPlanner impl
 
         // Make sure tick value didn't increase on us while adding. If it did, then we should just send the event
         if (tickValue <= currentTick.longValue()) {
-            sendEvents(tickOrdering.remove(tickValue));
+            sendTickEvents(tickOrdering.remove(tickValue));
         }
 
         return true;
@@ -123,7 +138,15 @@ public class DelayableConcurrentEventPlanner extends ConcurrentEventPlanner impl
         return super.cancelEvent(eventIdentifier);
     }
 
-    protected void sendEvents(Iterable<PendingEvent> events) {
+    public int getWaitingSize() {
+        return scheduledEvents.size() + tickEvents.size();
+    }
+
+    public int size() {
+        return getEventSize() + getWaitingSize();
+    }
+
+    private void sendTickEvents(Iterable<PendingEvent> events) {
         if (events != null) {
             events.forEach(event -> {
                 tickEvents.remove(event.getIdentifier());
@@ -133,14 +156,74 @@ public class DelayableConcurrentEventPlanner extends ConcurrentEventPlanner impl
     }
 
     public void nextTick() {
-        sendEvents(tickOrdering.remove(currentTick.incrementAndGet()));
+        // TODO: Probably never care about long overflowing
+        sendTickEvents(tickOrdering.remove(currentTick.incrementAndGet()));
     }
 
-    public void setAutoTicking(boolean enabled, long tickMinimumDelayNanoseconds) {
-        this.tickMinimumDelayMillseconds = tickMinimumDelayNanoseconds / 100000;
-        this.tickMinimumDelayNanoseconds = (int)(tickMinimumDelayNanoseconds % 100000);
-        this.allowAutoTicking = enabled;
+    private void autoTick() {
+        sendEvent(createEvent(AUTO_TICK));
+        nextTick();
+    }
 
-        // TODO: handle auto ticking
+    public void setAutoTicking(boolean enabled, boolean onlyWhenEmpty, long tickMinimumDelayNanoseconds) {
+        synchronized(this) {
+            this.tickMinimumDelayNanoseconds = tickMinimumDelayNanoseconds;
+            this.allowAutoTicking = enabled;
+            this.onlyAutoTickWhenEmpty = onlyWhenEmpty;
+
+            if (autoTickSchedule != null) {
+                autoTickSchedule.cancel(false);
+                autoTickSchedule = null;
+            }
+
+            if (enabled && tickMinimumDelayNanoseconds > 0) {
+                if (!onlyWhenEmpty) {
+                    autoTickSchedule = scheduler.scheduleAtFixedRate(() -> autoTick(), tickMinimumDelayNanoseconds, tickMinimumDelayNanoseconds, TimeUnit.NANOSECONDS);
+                } else if (tickMinimumDelayNanoseconds < 1) {
+                    Subscription sub = new SubscriptionImpl(ConcurrentEventPlanner.EMPTY_PLANNER_TYPE, 0, (subscription, event) -> {
+                        if (!isShutdown()) {
+                            autoTick();
+                        }
+                        return true;
+                    }, this);
+                    subscribe(sub);
+                } else {
+                    autoTickSchedule = scheduler.schedule(() -> nextTickSchedule(tickMinimumDelayNanoseconds), tickMinimumDelayNanoseconds, TimeUnit.NANOSECONDS);
+                }
+            }
+        }
+    }
+
+    private void nextTickSchedule(long tickMinimumDelayNanoseconds) {
+        synchronized(this) {
+            if (isShutdown()) {
+                return;
+            }
+            autoTickSchedule = null;
+
+            if (getEventSize() < 1) {
+                autoTick();
+                autoTickSchedule = scheduler.schedule(() -> nextTickSchedule(tickMinimumDelayNanoseconds), tickMinimumDelayNanoseconds, TimeUnit.NANOSECONDS);
+            } else {
+                final AtomicBoolean wasExecuted = new AtomicBoolean(false);
+                Subscription sub = new SubscriptionImpl(ConcurrentEventPlanner.EMPTY_PLANNER_TYPE, 0, (subscription, event) -> {
+                    if (wasExecuted.compareAndSet(false, true)) {
+                        autoTick();
+                        subscription.getSubscribable().unsubscribe(subscription.getIdentifier());
+                        autoTickSchedule = scheduler.schedule(() -> nextTickSchedule(tickMinimumDelayNanoseconds), tickMinimumDelayNanoseconds, TimeUnit.NANOSECONDS);
+                    }
+                    return true;
+                }, this);
+                subscribe(sub);
+
+                if (getEventSize() < 1) {
+                    unsubscribe(sub.getIdentifier());
+
+                    if (!wasExecuted.compareAndSet(false, true)) {
+                        autoTick();
+                    }
+                }
+            }
+        }
     }
 }
